@@ -1,8 +1,4 @@
-import 'package:json_annotation/json_annotation.dart';
-
-@JsonSerializable()
-class Song{
-
+class Song {
   final int songId;
   final String title;
   final String artist;
@@ -10,12 +6,20 @@ class Song{
   final int? bpm;
   final String? modulation;
   final String gender;
+  final String? note;
   final List<String> genres;
 
   Song(this.songId, this.title, this.artist, this.originalKey, this.bpm,
-      this.modulation, this.gender, this.genres);
+      this.modulation, this.gender, this.note, this.genres);
 
-  // factory Song.fromJson(Map<String, dynamic> json) => _$Song(json);
-  //
-  // Map<String, dynamic> toJson() => _$Song(this);
+  Song.fromJson(Map<String, dynamic> json)
+      : songId = json['songId'],
+        title = json['title'],
+        artist = json['artist'],
+        originalKey = json['originalKey'],
+        bpm = json['bpm'],
+        modulation = json['modulation'],
+        gender = json['gender'],
+        note = json['note'],
+        genres = List<String>.from(json['genres'].map((item) => item.toString()).toList());
 }
