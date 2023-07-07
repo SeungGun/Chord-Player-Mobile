@@ -15,8 +15,6 @@ class SongListPage extends StatefulWidget {
 }
 
 class _SongListPageState extends State<SongListPage> {
-  Song song = Song(1, "나를 사랑했던 사람아", "허각", "B", 63, null, "MALE", ["발라드"]);
-
   String _currentKey = '없음';
   String _currentCriteria = '제목';
   String _currentSort = '시간순';
@@ -57,15 +55,48 @@ class _SongListPageState extends State<SongListPage> {
   final criteriaList = ['제목', '가수'];
   final sortList = ['시간순', '이름순', '조회순'];
   final genderList = ['없음', '남자', '여자', '혼성'];
+  List<dynamic> _genreList = [];
   final TextEditingController _searchController = TextEditingController();
+  List<Song> songList = [];
 
-  // Future<List<String>> _getGenreList() async{
-  //   final response = await http.get(Uri.parse('${APIUtil.API_HOST}/genres'));
-  //
-  //   if(response.statusCode == 200){
-  //
-  //   }
-  // }
+  Future<void> _getGenreList() async {
+    String url = '${APIUtil.API_URL}/genres';
+
+    final response = await http.get(Uri.parse(url));
+
+    if (response.statusCode == 200) {
+      var decodedResponseJson2 =
+          APIUtil.decodedResponseListJson(response.bodyBytes);
+
+      setState(() {
+        _genreList = decodedResponseJson2.map((e) => e['genreName']).toList();
+      });
+    }
+  }
+
+  Future<void> _getSongList() async {
+    String url = '${APIUtil.API_URL}/songs';
+
+    final response = await http.get(Uri.parse(url + '?page=14&size=10'));
+    if (response.statusCode == 200) {
+      var decodedResponseJson2 =
+          APIUtil.decodedResponseListJson(response.bodyBytes);
+      print(decodedResponseJson2[0]['songId']);
+      setState(() {
+        for (int i = 0; i < 7; ++i) {
+          songList.add(Song.fromJson(decodedResponseJson2[0]));
+        }
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    _getGenreList();
+    _getSongList();
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     var size = MediaQuery.of(context).size;
@@ -89,7 +120,7 @@ class _SongListPageState extends State<SongListPage> {
                     width: size.width * 0.03,
                   ),
                   Container(
-                    width: size.width * 0.7,
+                    width: size.width * 0.75,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
@@ -151,7 +182,35 @@ class _SongListPageState extends State<SongListPage> {
                               ),
                             )));
                   }),
-                  _filterLayout(size, '장르', _currentGenre, () {}),
+                  _filterLayout(size, '장르', _currentGenre, () {
+                    showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                            shape: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            title: Text('검색 필터링 - 장르'),
+                            content: Container(
+                              width: double.maxFinite,
+                              child: ScrollConfiguration(
+                                behavior: const ScrollBehavior()
+                                    .copyWith(overscroll: false),
+                                child: ListView.builder(
+                                    shrinkWrap: true,
+                                    itemCount: _genreList.length,
+                                    itemBuilder: (context, index) {
+                                      return ListTile(
+                                        title: Text(_genreList[index]),
+                                        onTap: () {
+                                          setState(() {
+                                            _currentGenre = _genreList[index];
+                                          });
+                                          Navigator.pop(context);
+                                        },
+                                      );
+                                    }),
+                              ),
+                            )));
+                  }),
                   _filterLayout(size, '검색 기준', _currentCriteria, () {
                     showDialog(
                         context: context,
@@ -243,7 +302,15 @@ class _SongListPageState extends State<SongListPage> {
                 ],
               ),
             ),
-            SongItemWidget(song: song)
+            Expanded(
+              child: ListView.builder(
+                itemBuilder: (context, index) => SongItemWidget(
+                  song: songList[0],
+                ),
+                itemCount: 7,
+                shrinkWrap: true,
+              ),
+            )
           ],
         ),
         floatingActionButton: Expandable(
