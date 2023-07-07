@@ -69,7 +69,7 @@ class _ExpandableState extends State<Expandable>
         onPressed: toggle,
         child: Icon(
           Icons.close,
-          color: Theme.of(context).primaryColor,
+          color: Colors.red,
         ),
       ),
     );
@@ -82,6 +82,7 @@ class _ExpandableState extends State<Expandable>
       transform: Matrix4.rotationZ(_open ? 0 : pi / 4), //원주의 1/4만큼 rotate하겠다.
       child: AnimatedOpacity(
         child: FloatingActionButton(
+          backgroundColor: Colors.green,
           onPressed: toggle,
           child: Icon(Icons.close),
         ),
