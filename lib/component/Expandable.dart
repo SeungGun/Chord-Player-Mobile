@@ -6,10 +6,11 @@ class Expandable extends StatefulWidget {
   final double distance;
   final List<Widget> children;
 
-  Expandable({Key? key, required this.distance, required this.children})
+  const Expandable({Key? key, required this.distance, required this.children})
       : super(key: key);
+
   @override
-  _ExpandableState createState() => _ExpandableState();
+  State<Expandable> createState() => _ExpandableState();
 }
 
 class _ExpandableState extends State<Expandable>
@@ -17,12 +18,13 @@ class _ExpandableState extends State<Expandable>
   bool _open = false;
   late AnimationController _controller;
   late Animation<double> _expandAnimation;
+
   @override
   void initState() {
     _controller = AnimationController(
         vsync: this,
         value: _open ? 1.0 : 0.0,
-        duration: Duration(milliseconds: 300));
+        duration: const Duration(milliseconds: 300));
     _expandAnimation =
         CurvedAnimation(parent: _controller, curve: Curves.fastOutSlowIn);
     super.initState();
@@ -37,19 +39,21 @@ class _ExpandableState extends State<Expandable>
   @override
   Widget build(BuildContext context) {
     return SizedBox.expand(
-      child: Stack(alignment: Alignment.bottomRight,
+      child: Stack(
+          alignment: Alignment.bottomRight,
           children: [
             _buildTabToCloseFab(),
             _buildTabToOpenFab(),
           ]..insertAll(0, _buildExpandableActionButton())),
     );
   }
-  List<_ExpandableActionButton> _buildExpandableActionButton(){
+
+  List<_ExpandableActionButton> _buildExpandableActionButton() {
     List<_ExpandableActionButton> animChildren = [];
     final int count = widget.children.length;
     final double gap = 90.0 / (count - 1);
 
-    for(var i=0, degree = 0.0; i < count; i++, degree += gap){
+    for (var i = 0, degree = 0.0; i < count; i++, degree += gap) {
       animChildren.add(_ExpandableActionButton(
         distance: widget.distance,
         degree: degree,
@@ -59,15 +63,16 @@ class _ExpandableState extends State<Expandable>
     }
     return animChildren;
   }
+
   AnimatedContainer _buildTabToCloseFab() {
     return AnimatedContainer(
       transformAlignment: Alignment.center,
-      duration: Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 300),
       transform: Matrix4.rotationZ(_open ? 0 : pi / 4), //원주의 1/4만큼 rotate하겠다.
       child: FloatingActionButton(
         backgroundColor: Colors.white,
         onPressed: toggle,
-        child: Icon(
+        child: const Icon(
           Icons.close,
           color: Colors.red,
         ),
@@ -78,16 +83,16 @@ class _ExpandableState extends State<Expandable>
   AnimatedContainer _buildTabToOpenFab() {
     return AnimatedContainer(
       transformAlignment: Alignment.center,
-      duration: Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1000),
       transform: Matrix4.rotationZ(_open ? 0 : pi / 4), //원주의 1/4만큼 rotate하겠다.
       child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 300),
+        opacity: _open ? 0.0 : 1.0,
         child: FloatingActionButton(
           backgroundColor: Colors.green,
           onPressed: toggle,
-          child: Icon(Icons.close),
+          child: const Icon(Icons.close),
         ),
-        duration: Duration(milliseconds: 300),
-        opacity: _open ? 0.0 : 1.0,
       ),
     );
   }
@@ -95,10 +100,11 @@ class _ExpandableState extends State<Expandable>
   void toggle() {
     _open = !_open;
     setState(() {
-      if (_open)
+      if (_open) {
         _controller.forward();
-      else
+      } else {
         _controller.reverse();
+      }
     });
   }
 }
@@ -111,10 +117,10 @@ class _ExpandableActionButton extends StatelessWidget {
 
   const _ExpandableActionButton(
       {Key? key,
-        required this.distance,
-        required this.degree,
-        required this.progress,
-        required this.child})
+      required this.distance,
+      required this.degree,
+      required this.progress,
+      required this.child})
       : super(key: key);
 
   @override
