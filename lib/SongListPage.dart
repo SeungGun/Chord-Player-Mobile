@@ -21,7 +21,7 @@ class _SongListPageState extends State<SongListPage> {
   String _currentGender = '없음';
   String _currentGenre = '없음';
 
-  final keyList = [
+  final _keyList = [
     '없음',
     'C',
     'Cm',
@@ -52,12 +52,14 @@ class _SongListPageState extends State<SongListPage> {
     'B',
     'Bm'
   ];
-  final criteriaList = ['제목', '가수'];
-  final sortList = ['시간순', '이름순', '조회순'];
-  final genderList = ['없음', '남자', '여자', '혼성'];
+  final _criteriaList = ['제목', '가수'];
+  final _sortList = ['시간순', '이름순', '조회순'];
+  final _genderList = ['없음', '남자', '여자', '혼성'];
   List<dynamic> _genreList = [];
   final TextEditingController _searchController = TextEditingController();
-  List<Song> songList = [];
+  final ScrollController _songListController = ScrollController();
+  List<Song> _songList = [];
+  bool _isLoaded = false;
 
   Future<void> _getGenreList() async {
     String url = '${APIUtil.API_URL}/genres';
@@ -74,18 +76,28 @@ class _SongListPageState extends State<SongListPage> {
     }
   }
 
-  Future<void> _getSongList() async {
+  Future<void> _getSongList(
+      int current,
+      int size,
+      String? criteria,
+      String? keyword,
+      String? gender,
+      String? key,
+      String? genre,
+      String? sort) async {
     String url = '${APIUtil.API_URL}/songs';
 
-    final response = await http.get(Uri.parse(url + '?page=14&size=10'));
+    final response = await http.get(Uri.parse(url + '?page=14&size=10&key=Db'));
     if (response.statusCode == 200) {
       var decodedResponseJson2 =
           APIUtil.decodedResponseListJson(response.bodyBytes);
-      print(decodedResponseJson2[0]['songId']);
+      print(decodedResponseJson2);
       setState(() {
-        for (int i = 0; i < 7; ++i) {
-          songList.add(Song.fromJson(decodedResponseJson2[0]));
-        }
+        if (decodedResponseJson2.isNotEmpty)
+          for (int i = 0; i < 7; ++i) {
+            _songList.add(Song.fromJson(decodedResponseJson2[0]));
+          }
+        _isLoaded = true;
       });
     }
   }
@@ -93,7 +105,11 @@ class _SongListPageState extends State<SongListPage> {
   @override
   void initState() {
     _getGenreList();
-    _getSongList();
+    _getSongList(0, 10, null, null, null, null, null, null);
+    _songListController.addListener(() async {
+      if (_songListController.position.maxScrollExtent ==
+          _songListController.position.pixels) {}
+    });
     super.initState();
   }
 
@@ -109,31 +125,20 @@ class _SongListPageState extends State<SongListPage> {
               width: size.width,
               child: Row(
                 children: [
-                  SizedBox(
-                    width: size.width * 0.015,
-                  ),
-                  Icon(
-                    Icons.queue_music,
-                    size: 46,
-                  ),
-                  SizedBox(
-                    width: size.width * 0.03,
-                  ),
+                  SizedBox(width: size.width * 0.015),
+                  const Icon(Icons.queue_music, size: 46),
+                  SizedBox(width: size.width * 0.03),
                   Container(
                     width: size.width * 0.75,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      color: Colors.grey[300],
-                    ),
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.grey[300]),
                     child: TextField(
                       controller: _searchController,
                       style: const TextStyle(fontSize: 13),
                       decoration: const InputDecoration(
-                          prefixIcon: Icon(
-                            Icons.search,
-                            color: Colors.black,
-                          ),
+                          prefixIcon: Icon(Icons.search, color: Colors.black),
                           border: InputBorder.none),
                     ),
                   )
@@ -141,176 +146,50 @@ class _SongListPageState extends State<SongListPage> {
               ),
             ),
             Divider(
-              height: size.height * 0.005,
-              thickness: 0.5,
-              color: Colors.black,
-            ),
-            SizedBox(
-              height: size.height * 0.01,
-            ),
+                height: size.height * 0.005,
+                thickness: 0.5,
+                color: Colors.black),
+            SizedBox(height: size.height * 0.01),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
                   _filterLayout(size, '키', _currentKey, () {
-                    showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                            shape: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            title: Text('검색 필터링 - Key'),
-                            content: Container(
-                              width: double.maxFinite,
-                              height: size.height * 0.5,
-                              child: ScrollConfiguration(
-                                behavior: const ScrollBehavior()
-                                    .copyWith(overscroll: false),
-                                child: ListView.builder(
-                                    shrinkWrap: true,
-                                    itemCount: keyList.length,
-                                    itemBuilder: (context, index) {
-                                      return ListTile(
-                                        title: Text(keyList[index]),
-                                        onTap: () {
-                                          setState(() {
-                                            _currentKey = keyList[index];
-                                          });
-                                          Navigator.pop(context);
-                                        },
-                                      );
-                                    }),
-                              ),
-                            )));
+                    _showFilterDialog(size, 'Key', _keyList, _currentKey);
                   }),
                   _filterLayout(size, '장르', _currentGenre, () {
-                    showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                            shape: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            title: Text('검색 필터링 - 장르'),
-                            content: Container(
-                              width: double.maxFinite,
-                              child: ScrollConfiguration(
-                                behavior: const ScrollBehavior()
-                                    .copyWith(overscroll: false),
-                                child: ListView.builder(
-                                    shrinkWrap: true,
-                                    itemCount: _genreList.length,
-                                    itemBuilder: (context, index) {
-                                      return ListTile(
-                                        title: Text(_genreList[index]),
-                                        onTap: () {
-                                          setState(() {
-                                            _currentGenre = _genreList[index];
-                                          });
-                                          Navigator.pop(context);
-                                        },
-                                      );
-                                    }),
-                              ),
-                            )));
+                    _showFilterDialog(size, '장르', _genreList, _currentGenre);
                   }),
                   _filterLayout(size, '검색 기준', _currentCriteria, () {
-                    showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                            shape: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            title: Text('검색 필터링 - 검색 기준'),
-                            content: Container(
-                              width: double.maxFinite,
-                              child: ScrollConfiguration(
-                                behavior: const ScrollBehavior()
-                                    .copyWith(overscroll: false),
-                                child: ListView.builder(
-                                    shrinkWrap: true,
-                                    itemCount: criteriaList.length,
-                                    itemBuilder: (context, index) {
-                                      return ListTile(
-                                        title: Text(criteriaList[index]),
-                                        onTap: () {
-                                          setState(() {
-                                            _currentCriteria =
-                                                criteriaList[index];
-                                          });
-                                          Navigator.pop(context);
-                                        },
-                                      );
-                                    }),
-                              ),
-                            )));
+                    _showFilterDialog(
+                        size, '검색 기준', _criteriaList, _currentCriteria);
                   }),
                   _filterLayout(size, '정렬 기준', _currentSort, () {
-                    showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                            shape: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            title: Text('검색 필터링 - 정렬 기준'),
-                            content: Container(
-                              width: double.maxFinite,
-                              child: ScrollConfiguration(
-                                behavior: const ScrollBehavior()
-                                    .copyWith(overscroll: false),
-                                child: ListView.builder(
-                                    shrinkWrap: true,
-                                    itemCount: sortList.length,
-                                    itemBuilder: (context, index) {
-                                      return ListTile(
-                                        title: Text(sortList[index]),
-                                        onTap: () {
-                                          setState(() {
-                                            _currentSort = sortList[index];
-                                          });
-                                          Navigator.pop(context);
-                                        },
-                                      );
-                                    }),
-                              ),
-                            )));
+                    _showFilterDialog(size, '정렬 기준', _sortList, _currentSort);
                   }),
                   _filterLayout(size, '성별', _currentGender, () {
-                    showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                            shape: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            title: Text('검색 필터링 - 성별'),
-                            content: Container(
-                              width: double.maxFinite,
-                              child: ScrollConfiguration(
-                                behavior: const ScrollBehavior()
-                                    .copyWith(overscroll: false),
-                                child: ListView.builder(
-                                    shrinkWrap: true,
-                                    itemCount: genderList.length,
-                                    itemBuilder: (context, index) {
-                                      return ListTile(
-                                        title: Text(genderList[index]),
-                                        onTap: () {
-                                          setState(() {
-                                            _currentGender = genderList[index];
-                                          });
-                                          Navigator.pop(context);
-                                        },
-                                      );
-                                    }),
-                              ),
-                            )));
+                    _showFilterDialog(size, '성별', _genderList, _currentGender);
                   }),
                 ],
               ),
             ),
-            Expanded(
-              child: ListView.builder(
-                itemBuilder: (context, index) => SongItemWidget(
-                  song: songList[0],
-                ),
-                itemCount: 7,
-                shrinkWrap: true,
-              ),
-            )
+            _isLoaded
+                ? _songList.isEmpty
+                    ? const Expanded(
+                        child: Center(
+                        child: Text('노래 목록이 없습니다!',
+                            style: TextStyle(
+                                fontSize: 15, fontWeight: FontWeight.bold)),
+                      ))
+                    : Expanded(
+                        child: ListView.builder(
+                            controller: _songListController,
+                            itemBuilder: (context, index) =>
+                                SongItemWidget(song: _songList[0]),
+                            itemCount: 7,
+                            shrinkWrap: true))
+                : const Expanded(
+                    child: Center(child: CircularProgressIndicator()))
           ],
         ),
         floatingActionButton: Expandable(
@@ -350,24 +229,50 @@ class _SongListPageState extends State<SongListPage> {
             padding: EdgeInsets.all(size.width * 0.015),
             child: Row(
               children: [
-                Text(
-                  '$title: ',
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  value,
-                  style: TextStyle(
-                      fontSize: 13,
-                      color: (value == '없음' || value == '제목' || value == '시간순')
-                          ? Colors.black
-                          : Colors.green),
-                )
+                Text('$title: ',
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.bold)),
+                Text(value,
+                    style: TextStyle(
+                        fontSize: 13,
+                        color:
+                            (value == '없음' || value == '제목' || value == '시간순')
+                                ? Colors.black
+                                : Colors.green))
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  void _showFilterDialog(
+      Size size, String title, List filterList, String filterValue) {
+    showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+            shape: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            title: Text('검색 필터링 - $title'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ScrollConfiguration(
+                behavior: const ScrollBehavior().copyWith(overscroll: false),
+                child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: filterList.length,
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        title: Text(filterList[index]),
+                        onTap: () {
+                          setState(() {
+                            filterValue = filterList[index];
+                          });
+                          Navigator.pop(context);
+                        },
+                      );
+                    }),
+              ),
+            )));
   }
 }
