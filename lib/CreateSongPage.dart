@@ -1,6 +1,7 @@
 import 'package:chord_player/util/APIUtil.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
 
 class CreateSongPage extends StatefulWidget {
@@ -27,6 +28,38 @@ class _CreateSongPageState extends State<CreateSongPage> {
 
   List<String> _genreList = [];
   List<String> selectedItems = [];
+
+  String _selectedKey = '';
+  final _keyList = [
+    'C',
+    'Cm',
+    'C#',
+    'C#m',
+    'Db',
+    'Dbm',
+    'E',
+    'Em',
+    'F',
+    'Fm',
+    'F#',
+    'F#m',
+    'Gb',
+    'Gbm',
+    'G',
+    'Gm',
+    'G#',
+    'G#m',
+    'Ab',
+    'Abm',
+    'A',
+    'Am',
+    'A#',
+    'A#m',
+    'Bb',
+    'Bbm',
+    'B',
+    'Bm'
+  ];
 
   Future<void> _getGenreList() async {
     String url = '${APIUtil.API_URL}/genres';
@@ -91,7 +124,7 @@ class _CreateSongPageState extends State<CreateSongPage> {
               ),
               Text('* 제목'),
               SizedBox(
-                height: size.height * 0.01,
+                height: size.height * 0.012,
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -115,12 +148,10 @@ class _CreateSongPageState extends State<CreateSongPage> {
                   ),
                 ],
               ),
-              SizedBox(
-                height: size.height * 0.01,
-              ),
+              Divider(),
               Text('* 가수'),
               SizedBox(
-                height: size.height * 0.01,
+                height: size.height * 0.012,
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
@@ -144,26 +175,56 @@ class _CreateSongPageState extends State<CreateSongPage> {
                   ),
                 ],
               ),
-              SizedBox(
-                height: size.height * 0.01,
-              ),
+              Divider(),
               Text('* 원키'),
               SizedBox(
-                height: size.height * 0.01,
+                height: size.height * 0.012,
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   Container(
-                    width: size.width * 0.25,
+                    width: size.width * 0.2,
                     decoration: BoxDecoration(
                         color: Colors.white,
                         border: Border.all(width: 0.2),
                         borderRadius: BorderRadius.circular(9)),
                     child: TextField(
-                      onChanged: (value) {
-                        _initModulationController.text = value;
+                      onTap: () async {
+                        var value = await showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                                shape: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                                title: Text('키 목록'),
+                                content: SizedBox(
+                                  width: double.maxFinite,
+                                  child: ScrollConfiguration(
+                                    behavior: const ScrollBehavior()
+                                        .copyWith(overscroll: false),
+                                    child: ListView.builder(
+                                        shrinkWrap: true,
+                                        itemCount: _keyList.length,
+                                        itemBuilder: (context, index) {
+                                          return ListTile(
+                                            title: Text(_keyList[index]),
+                                            onTap: () {
+                                              setState(() {
+                                                _selectedKey = _keyList[index];
+                                              });
+                                              Navigator.pop(
+                                                  context, _selectedKey);
+                                            },
+                                          );
+                                        }),
+                                  ),
+                                )));
+                        setState(() {
+                          _keyController.text = value;
+                          _initModulationController.text = value;
+                        });
                       },
+                      readOnly: true,
                       style: TextStyle(fontSize: 13),
                       controller: _keyController,
                       textAlign: TextAlign.center,
@@ -172,9 +233,7 @@ class _CreateSongPageState extends State<CreateSongPage> {
                   ),
                 ],
               ),
-              SizedBox(
-                height: size.height * 0.01,
-              ),
+              Divider(),
               Text('* 성별'),
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
@@ -232,12 +291,13 @@ class _CreateSongPageState extends State<CreateSongPage> {
                   ),
                 ],
               ),
+              Divider(),
               Text('BPM'),
               SizedBox(
-                height: size.height * 0.01,
+                height: size.height * 0.012,
               ),
               Container(
-                width: size.width * 0.25,
+                width: size.width * 0.2,
                 decoration: BoxDecoration(
                     color: Colors.white,
                     border: Border.all(width: 0.2),
@@ -257,12 +317,10 @@ class _CreateSongPageState extends State<CreateSongPage> {
                   decoration: const InputDecoration(border: InputBorder.none),
                 ),
               ),
+              Divider(),
+              Text('전조'),
               SizedBox(
-                height: size.height * 0.01,
-              ),
-              Text('전조(키 변경)'),
-              SizedBox(
-                height: size.height * 0.01,
+                height: size.height * 0.012,
               ),
               Row(
                 children: [
@@ -288,12 +346,18 @@ class _CreateSongPageState extends State<CreateSongPage> {
                   RawMaterialButton(
                     onPressed: () {
                       setState(() {
-                        if (_keyController.text.isNotEmpty &&
-                            _modulationControllerList.length < 4) {
-                          _modulationControllerList
-                              .add(TextEditingController());
-                          _modulationWidgetList.add(_keyBox(
-                              size, _modulationControllerList.length - 1));
+                        if (_keyController.text.isNotEmpty) {
+                          if (_modulationControllerList.length < 4) {
+                            _modulationControllerList
+                                .add(TextEditingController());
+                            _modulationWidgetList.add(_keyBox(
+                                size, _modulationControllerList.length - 1));
+                          } else {
+                            Fluttertoast.showToast(
+                                msg: '전조는 최대 4개까지 입력 가능합니다.');
+                          }
+                        } else {
+                          Fluttertoast.showToast(msg: '원키를 먼저 입력해주세요!');
                         }
                       });
                     },
@@ -309,63 +373,89 @@ class _CreateSongPageState extends State<CreateSongPage> {
                   )
                 ],
               ),
+              Divider(),
               Text('* 장르'),
-              TextButton(
-                  onPressed: () async {
-                    List<String>? items = await showDialog<List<String>>(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                          title: Text('장르 선택'),
-                          content:
-                              StatefulBuilder(builder: (context, setState) {
-                            return SingleChildScrollView(
-                              child: Column(
-                                children: _genreList.map((item) {
-                                  bool isSelected =
-                                      selectedItems.contains(item);
-                                  return CheckboxListTile(
-                                    title: Text(item),
-                                    value: isSelected,
-                                    onChanged: (value) {
-                                      setState(() {
-                                        if (isSelected) {
-                                          selectedItems.remove(item);
-                                        } else {
-                                          selectedItems.add(item);
-                                        }
-                                      });
-                                    },
-                                  );
-                                }).toList(),
-                              ),
-                            );
-                          }),
-                          actions: <Widget>[
-                            TextButton(
-                              child: Text('닫기'),
-                              onPressed: () {
-                                Navigator.of(context).pop(selectedItems);
-                              },
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                    setState(() {
-                      if (selectedItems != null) {}
-                    });
-                  },
-                  child: Text('장르 목록 불러오기')),
-              Column(
-                children: _genreWidgetList(selectedItems),
-              ),
               SizedBox(
-                height: size.height * 0.01,
+                height: size.height * 0.012,
               ),
+              Container(
+                width: size.width * 0.35,
+                decoration: BoxDecoration(
+                    border: Border.all(width: 0.5),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(9)),
+                child: TextButton(
+                    style: ButtonStyle(visualDensity: VisualDensity.compact),
+                    onPressed: () async {
+                      List<String>? items = await showDialog<List<String>>(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text('장르 선택(복수 선택)'),
+                            content:
+                                StatefulBuilder(builder: (context, setState) {
+                              return SingleChildScrollView(
+                                child: Column(
+                                  children: _genreList.map((item) {
+                                    bool isSelected =
+                                        selectedItems.contains(item);
+                                    return CheckboxListTile(
+                                      title: Text(item),
+                                      value: isSelected,
+                                      onChanged: (value) {
+                                        setState(() {
+                                          if (isSelected) {
+                                            selectedItems.remove(item);
+                                          } else {
+                                            selectedItems.add(item);
+                                          }
+                                        });
+                                      },
+                                    );
+                                  }).toList(),
+                                ),
+                              );
+                            }),
+                            actions: <Widget>[
+                              TextButton(
+                                child: Text('닫기'),
+                                onPressed: () {
+                                  Navigator.of(context).pop(selectedItems);
+                                },
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                      setState(() {
+                        if (selectedItems != null) {}
+                      });
+                    },
+                    child: Text(
+                      '장르 선택하기',
+                      style: TextStyle(fontSize: 12),
+                    )),
+              ),
+              selectedItems.length > 0
+                  ? Padding(
+                      padding: EdgeInsets.all(size.width * 0.02),
+                      child: Text(
+                        '※ 선택된 장르 목록',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green),
+                      ),
+                    )
+                  : SizedBox(),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: _genreWidgetList(size, selectedItems),
+              ),
+              Divider(),
               Text('메모'),
               SizedBox(
-                height: size.height * 0.01,
+                height: size.height * 0.012,
               ),
               Container(
                 width: size.width * 0.9,
@@ -385,13 +475,13 @@ class _CreateSongPageState extends State<CreateSongPage> {
                 ),
               ),
               SizedBox(
-                height: size.height * 0.01,
+                height: size.height * 0.012,
               ),
               Divider(
                 color: Colors.black45,
               ),
               SizedBox(
-                height: size.height * 0.01,
+                height: size.height * 0.012,
               ),
               Text(
                 '가사 및 코드 정보',
@@ -421,7 +511,20 @@ class _CreateSongPageState extends State<CreateSongPage> {
     );
   }
 
-  List<Widget> _genreWidgetList(List<String> list) {
-    return list.map((e) => Text(e)).toList();
+  List<Widget> _genreWidgetList(Size size, List<String> list) {
+    return list
+        .map((e) => Container(
+            width: size.width * 0.18,
+            decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(width: 0.1)),
+            padding: EdgeInsets.all(size.width * 0.02),
+            margin: EdgeInsets.all(size.width * 0.005),
+            child: Text(
+              '- $e',
+              style: TextStyle(fontSize: 12),
+            )))
+        .toList();
   }
 }
