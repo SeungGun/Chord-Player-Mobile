@@ -55,7 +55,7 @@ class _SongListPageState extends State<SongListPage> {
   final _criteriaList = ['제목', '가수'];
   final _sortList = ['시간순', '이름순', '조회순'];
   final _genderList = ['없음', '남자', '여자', '혼성'];
-  List<dynamic> _genreList = [];
+  List<String> _genreList = ['없음'];
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _songListController = ScrollController();
   List<Song> _songList = [];
@@ -71,7 +71,8 @@ class _SongListPageState extends State<SongListPage> {
           APIUtil.decodedResponseListJson(response.bodyBytes);
 
       setState(() {
-        _genreList = decodedResponseJson2.map((e) => e['genreName']).toList();
+        _genreList.addAll(
+            decodedResponseJson2.map((e) => e['genreName'] as String).toList());
       });
     }
   }
@@ -87,7 +88,7 @@ class _SongListPageState extends State<SongListPage> {
       String? sort) async {
     String url = '${APIUtil.API_URL}/songs';
 
-    final response = await http.get(Uri.parse(url + '?page=14&size=10&key=Db'));
+    final response = await http.get(Uri.parse('$url?page=$current&size=$size'));
     if (response.statusCode == 200) {
       var decodedResponseJson2 =
           APIUtil.decodedResponseListJson(response.bodyBytes);
@@ -99,6 +100,8 @@ class _SongListPageState extends State<SongListPage> {
           }
         _isLoaded = true;
       });
+    } else {
+      print(response.body);
     }
   }
 
@@ -155,41 +158,46 @@ class _SongListPageState extends State<SongListPage> {
               child: Row(
                 children: [
                   _filterLayout(size, '키', _currentKey, () {
-                    _showFilterDialog(size, 'Key', _keyList, _currentKey);
+                    _showFilterDialog(size, 'Key', _keyList);
                   }),
                   _filterLayout(size, '장르', _currentGenre, () {
-                    _showFilterDialog(size, '장르', _genreList, _currentGenre);
+                    _showFilterDialog(size, '장르', _genreList);
                   }),
                   _filterLayout(size, '검색 기준', _currentCriteria, () {
-                    _showFilterDialog(
-                        size, '검색 기준', _criteriaList, _currentCriteria);
+                    _showFilterDialog(size, '검색 기준', _criteriaList);
                   }),
                   _filterLayout(size, '정렬 기준', _currentSort, () {
-                    _showFilterDialog(size, '정렬 기준', _sortList, _currentSort);
+                    _showFilterDialog(size, '정렬 기준', _sortList);
                   }),
                   _filterLayout(size, '성별', _currentGender, () {
-                    _showFilterDialog(size, '성별', _genderList, _currentGender);
+                    _showFilterDialog(size, '성별', _genderList);
                   }),
                 ],
               ),
             ),
             _isLoaded
                 ? _songList.isEmpty
-                    ? const Expanded(
-                        child: Center(
-                        child: Text('노래 목록이 없습니다!',
-                            style: TextStyle(
-                                fontSize: 15, fontWeight: FontWeight.bold)),
-                      ))
+                    ? Expanded(
+                        child: const Center(
+                          child: Text('노래 목록이 없습니다!',
+                              style: TextStyle(
+                                  fontSize: 15, fontWeight: FontWeight.bold)),
+                        ))
                     : Expanded(
+                        child: RefreshIndicator(
+                        onRefresh: () async {},
                         child: ListView.builder(
                             controller: _songListController,
                             itemBuilder: (context, index) =>
                                 SongItemWidget(song: _songList[0]),
                             itemCount: 7,
-                            shrinkWrap: true))
-                : const Expanded(
-                    child: Center(child: CircularProgressIndicator()))
+                            shrinkWrap: true),
+                      ))
+                : Expanded(
+                    child: RefreshIndicator(
+                        onRefresh: () async {},
+                        child:
+                            const Center(child: CircularProgressIndicator())))
           ],
         ),
         floatingActionButton: Expandable(
@@ -231,10 +239,10 @@ class _SongListPageState extends State<SongListPage> {
               children: [
                 Text('$title: ',
                     style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.bold)),
+                        fontSize: 12, fontWeight: FontWeight.bold)),
                 Text(value,
                     style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         color:
                             (value == '없음' || value == '제목' || value == '시간순')
                                 ? Colors.black
@@ -247,8 +255,7 @@ class _SongListPageState extends State<SongListPage> {
     );
   }
 
-  void _showFilterDialog(
-      Size size, String title, List filterList, String filterValue) {
+  void _showFilterDialog(Size size, String title, List filterList) {
     showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -266,7 +273,22 @@ class _SongListPageState extends State<SongListPage> {
                         title: Text(filterList[index]),
                         onTap: () {
                           setState(() {
-                            filterValue = filterList[index];
+                            switch (title) {
+                              case 'Key':
+                                _currentKey = filterList[index];
+                                break;
+                              case '장르':
+                                _currentGenre = filterList[index];
+                                break;
+                              case '검색 기준':
+                                _currentCriteria = filterList[index];
+                                break;
+                              case '정렬 기준':
+                                _currentSort = filterList[index];
+                                break;
+                              case '성별':
+                                _currentGender = filterList[index];
+                            }
                           });
                           Navigator.pop(context);
                         },
