@@ -55,24 +55,25 @@ class _SongListPageState extends State<SongListPage> {
   final _criteriaList = ['제목', '가수'];
   final _sortList = ['시간순', '이름순', '조회순'];
   final _genderList = ['없음', '남자', '여자', '혼성'];
-  List<String> _genreList = ['없음'];
+  final List<String> _genreList = ['없음'];
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _songListController = ScrollController();
-  List<Song> _songList = [];
+  final List<Song> _songList = [];
+
   bool _isLoaded = false;
+  String? criteriaParam;
+  String? genderParam;
+  String? sortParam;
 
   Future<void> _getGenreList() async {
     String url = '${APIUtil.API_URL}/genres';
-
     final response = await http.get(Uri.parse(url));
 
     if (response.statusCode == 200) {
-      var decodedResponseJson2 =
-          APIUtil.decodedResponseListJson(response.bodyBytes);
-
+      var decodedJson = APIUtil.decodedResponseListJson(response.bodyBytes);
       setState(() {
-        _genreList.addAll(
-            decodedResponseJson2.map((e) => e['genreName'] as String).toList());
+        _genreList
+            .addAll(decodedJson.map((e) => e['genreName'] as String).toList());
       });
     }
   }
@@ -86,18 +87,26 @@ class _SongListPageState extends State<SongListPage> {
       String? key,
       String? genre,
       String? sort) async {
+    _isLoaded = false;
     String url = '${APIUtil.API_URL}/songs';
 
-    final response = await http.get(Uri.parse('$url?page=$current&size=$size'));
+    String c = criteria == null ? "" : '&searchCriteria=$criteria';
+    String kw = (keyword == null || keyword.isEmpty) ? "" : '&keyword=$keyword';
+    String gd = (gender == null || gender == '없음') ? "" : '&gender=$gender';
+    String k = (key == null || key == '없음') ? "" : '&key=$key';
+    String g = (genre == null || genre == '없음') ? "" : '&genre=$genre';
+    String s = sort == null ? "" : '&sort=$sort';
+
+    final response = await http
+        .get(Uri.parse('$url?page=$current&size=$size$c$kw$gd$k$g$s'));
     if (response.statusCode == 200) {
-      var decodedResponseJson2 =
-          APIUtil.decodedResponseListJson(response.bodyBytes);
-      print(decodedResponseJson2);
+      var decodedJson = APIUtil.decodedResponseListJson(response.bodyBytes);
       setState(() {
-        if (decodedResponseJson2.isNotEmpty)
-          for (int i = 0; i < 7; ++i) {
-            _songList.add(Song.fromJson(decodedResponseJson2[0]));
+        if (decodedJson.isNotEmpty) {
+          for (int i = 0; i < decodedJson.length; ++i) {
+            _songList.add(Song.fromJson(decodedJson[i]));
           }
+        }
         _isLoaded = true;
       });
     } else {
@@ -109,9 +118,20 @@ class _SongListPageState extends State<SongListPage> {
   void initState() {
     _getGenreList();
     _getSongList(0, 10, null, null, null, null, null, null);
+
     _songListController.addListener(() async {
       if (_songListController.position.maxScrollExtent ==
-          _songListController.position.pixels) {}
+          _songListController.position.pixels) {
+        await _getSongList(
+            _songList[_sortList.length - 1].songId,
+            10,
+            criteriaParam,
+            _searchController.text,
+            genderParam,
+            _currentKey,
+            _currentGenre,
+            sortParam);
+      }
     });
     super.initState();
   }
@@ -177,20 +197,30 @@ class _SongListPageState extends State<SongListPage> {
             ),
             _isLoaded
                 ? _songList.isEmpty
-                    ? Expanded(
-                        child: const Center(
-                          child: Text('노래 목록이 없습니다!',
-                              style: TextStyle(
-                                  fontSize: 15, fontWeight: FontWeight.bold)),
-                        ))
+                    ? const Expanded(
+                        child: Center(
+                        child: Text('노래 목록이 없습니다!',
+                            style: TextStyle(
+                                fontSize: 15, fontWeight: FontWeight.bold)),
+                      ))
                     : Expanded(
                         child: RefreshIndicator(
-                        onRefresh: () async {},
+                        onRefresh: () async {
+                          await _getSongList(
+                              0,
+                              10,
+                              criteriaParam,
+                              _searchController.text,
+                              genderParam,
+                              _currentKey,
+                              _currentGenre,
+                              sortParam);
+                        },
                         child: ListView.builder(
                             controller: _songListController,
                             itemBuilder: (context, index) =>
-                                SongItemWidget(song: _songList[0]),
-                            itemCount: 7,
+                                SongItemWidget(song: _songList[index]),
+                            itemCount: _songList.length,
                             shrinkWrap: true),
                       ))
                 : Expanded(
@@ -236,6 +266,7 @@ class _SongListPageState extends State<SongListPage> {
           child: Ink(
             padding: EdgeInsets.all(size.width * 0.015),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text('$title: ',
                     style: const TextStyle(
@@ -282,13 +313,61 @@ class _SongListPageState extends State<SongListPage> {
                                 break;
                               case '검색 기준':
                                 _currentCriteria = filterList[index];
+                                switch (_currentCriteria) {
+                                  case '제목':
+                                    criteriaParam = 'TITLE';
+                                    break;
+                                  case '가수':
+                                    criteriaParam = 'ARTIST';
+                                    break;
+                                  default:
+                                    criteriaParam = null;
+                                }
                                 break;
                               case '정렬 기준':
                                 _currentSort = filterList[index];
+                                switch (_currentSort) {
+                                  case '시간순':
+                                    sortParam = 'CHRONOLOGICAL';
+                                    break;
+                                  case '이름순':
+                                    sortParam = 'NAME';
+                                    break;
+                                  case '조회순':
+                                    sortParam = 'VIEW';
+                                    break;
+                                  default:
+                                    sortParam = null;
+                                }
                                 break;
                               case '성별':
                                 _currentGender = filterList[index];
+                                switch (_currentGender) {
+                                  case '남자':
+                                    genderParam = 'MALE';
+                                    break;
+                                  case '여자':
+                                    genderParam = 'FEMALE';
+                                    break;
+                                  case '혼성':
+                                    genderParam = 'MIXED';
+                                    break;
+                                  default:
+                                    genderParam = null;
+                                }
                             }
+                          });
+                          setState(() {
+                            _songList.clear();
+                            _getSongList(
+                                0,
+                                10,
+                                criteriaParam,
+                                _searchController.text,
+                                genderParam,
+                                _currentKey,
+                                _currentGenre,
+                                sortParam);
                           });
                           Navigator.pop(context);
                         },
