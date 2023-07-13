@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:chord_player/util/APIUtil.dart';
 import 'package:flutter/material.dart';
@@ -30,8 +31,8 @@ class _CreateSongPageState extends State<CreateSongPage> {
   final List<String> _genreList = [];
   final List<String> _selectedItems = [];
   final List<String> _selectedTagList = [];
-  final StreamController<String> _selectedTagController =
-      StreamController<String>.broadcast();
+  final StreamController<List<String>> _selectedTagController =
+      StreamController<List<String>>.broadcast();
   final _tagList = [
     'Intro',
     'Verse',
@@ -48,6 +49,8 @@ class _CreateSongPageState extends State<CreateSongPage> {
     'C#m',
     'Db',
     'Dbm',
+    'D',
+    'Dm',
     'E',
     'Em',
     'F',
@@ -72,7 +75,7 @@ class _CreateSongPageState extends State<CreateSongPage> {
     'Bm'
   ];
   String _selectedKey = '';
-  int _selectedRadio = 1;
+  String _selectedRadio = 'MALE';
 
   Future<void> _getGenreList() async {
     String url = '${APIUtil.API_URL}/genres';
@@ -88,12 +91,87 @@ class _CreateSongPageState extends State<CreateSongPage> {
     }
   }
 
-  Future<void> _registerNewSongWithLyricsAndChords() async {}
+  Future<void> _registerNewSongWithLyricsAndChords() async {
+    String url = '${APIUtil.API_URL}/songs';
+    final response = await http.post(Uri.parse(url),
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(_createBody()));
 
-  void _setSelectedRadio(int val) {
+    if (response.statusCode == 200) {
+      print(response.body);
+    }
+    else{
+      print(response.body);
+    }
+  }
+
+  void _setSelectedRadio(String val) {
     setState(() {
       _selectedRadio = val;
     });
+  }
+
+  String? _formatModulation() {
+    String modulation = '${_initModController.text}';
+    if (_modulationControllerList.isNotEmpty) {
+      modulation += '-';
+    } else {
+      return null;
+    }
+
+    for (int i = 0; i < _modulationControllerList.length; ++i) {
+      if (_modulationControllerList[i].text.isNotEmpty) {
+        modulation += _modulationControllerList[i].text;
+      }
+      if (i != _modulationControllerList.length - 1) {
+        modulation += '-';
+      }
+    }
+    return modulation;
+  }
+
+  Map<String, dynamic> _createBody() {
+    Map<String, dynamic> requestBody = {
+      'title': _titleController.text,
+      'artist': _artistController.text,
+      'originalKey': _keyController.text,
+      'gender': _selectedRadio,
+      'bpm': _bpmController.text,
+      'modulation': _formatModulation(),
+      'note': _memoController.text,
+      'genres': _selectedItems,
+      'contents': _arrangeLyricsAndChord()
+    };
+
+    return requestBody;
+  }
+
+  List<Map<String, dynamic>> _arrangeLyricsAndChord() {
+    List<Map<String, dynamic>> contents = [];
+
+    for (int i = 0; i < _lyricsControllerList.length; ++i) {
+      Map<String, dynamic> lyrics = {
+        'lyrics': _lyricsControllerList[i].text,
+        'tag': _convertTag(_selectedTagList[i]),
+      };
+      List<String> chords = [];
+      for (int j = 0; j < _chordControllerList[i].length; ++j) {
+        chords.add(_chordControllerList[i][j].text);
+      }
+      lyrics['chords'] = chords;
+      contents.add(lyrics);
+    }
+
+    return contents;
+  }
+
+  String? _convertTag(String current) {
+    if (current == 'Verse' || current == 'Chorus') {
+      return null;
+    }
+    return current.toUpperCase();
   }
 
   @override
@@ -245,12 +323,12 @@ class _CreateSongPageState extends State<CreateSongPage> {
                       children: [
                         GestureDetector(
                           onTap: () {
-                            _setSelectedRadio(1);
+                            _setSelectedRadio('MALE');
                           },
                           child: Row(
                             children: [
                               Radio(
-                                value: 1,
+                                value: 'MALE',
                                 groupValue: _selectedRadio,
                                 onChanged: (val) {
                                   _setSelectedRadio(val!);
@@ -262,12 +340,12 @@ class _CreateSongPageState extends State<CreateSongPage> {
                         ),
                         GestureDetector(
                           onTap: () {
-                            _setSelectedRadio(2);
+                            _setSelectedRadio('FEMALE');
                           },
                           child: Row(
                             children: [
                               Radio(
-                                value: 2,
+                                value: 'FEMALE',
                                 groupValue: _selectedRadio,
                                 onChanged: (val) {
                                   _setSelectedRadio(val!);
@@ -279,12 +357,12 @@ class _CreateSongPageState extends State<CreateSongPage> {
                         ),
                         GestureDetector(
                           onTap: () {
-                            _setSelectedRadio(3);
+                            _setSelectedRadio('MIXED');
                           },
                           child: Row(
                             children: [
                               Radio(
-                                value: 3,
+                                value: 'MIXED',
                                 groupValue: _selectedRadio,
                                 onChanged: (val) {
                                   _setSelectedRadio(val!);
@@ -531,7 +609,9 @@ class _CreateSongPageState extends State<CreateSongPage> {
               decoration: BoxDecoration(color: Colors.lightBlueAccent),
               child: TextButton(
                   style: ButtonStyle(visualDensity: VisualDensity.compact),
-                  onPressed: () {},
+                  onPressed: () async {
+                    await _registerNewSongWithLyricsAndChords();
+                  },
                   child: Text('저장하기',
                       style: TextStyle(color: Colors.white, fontSize: 13))))
         ],
@@ -588,7 +668,6 @@ class _CreateSongPageState extends State<CreateSongPage> {
                 int? maxLength,
                 required bool isFocused}) =>
             null,
-        maxLength: 3,
         decoration: InputDecoration(
             border: InputBorder.none,
             isDense: true,
@@ -648,15 +727,15 @@ class _CreateSongPageState extends State<CreateSongPage> {
                                 ));
                         setState(() {
                           _selectedTagList[index] = value;
-                          _selectedTagController.add(_selectedTagList[index]);
+                          _selectedTagController.add(_selectedTagList);
                         });
                       },
                       style: const ButtonStyle(
                           visualDensity: VisualDensity.compact),
-                      child: StreamBuilder<String>(
+                      child: StreamBuilder<List<String>>(
                         builder: (context, snapshot) {
                           if (snapshot.hasData) {
-                            var c = snapshot.data!.characters;
+                            var c = snapshot.data![index].characters;
                             return Text(
                                 '${c.characterAt(0).toString()}${c.characterAt(c.length - 1).toString()}',
                                 style: const TextStyle(fontSize: 12));
@@ -664,7 +743,7 @@ class _CreateSongPageState extends State<CreateSongPage> {
                             return const SizedBox();
                           }
                         },
-                        initialData: _selectedTagList[index],
+                        initialData: _selectedTagList,
                         stream: _selectedTagController.stream,
                       ),
                     )),
