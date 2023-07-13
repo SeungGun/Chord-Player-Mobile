@@ -29,7 +29,9 @@ class _SongListPageState extends State<SongListPage> {
     'C#m',
     'Db',
     'Dbm',
-    'E',
+    'D',
+    'Dm'
+        'E',
     'Em',
     'F',
     'Fm',
@@ -61,9 +63,9 @@ class _SongListPageState extends State<SongListPage> {
   final List<Song> _songList = [];
 
   bool _isLoaded = false;
-  String? criteriaParam;
+  String? criteriaParam = 'TITLE';
   String? genderParam;
-  String? sortParam;
+  String? sortParam = 'CHRONOLOGICAL';
 
   Future<void> _getGenreList() async {
     String url = '${APIUtil.API_URL}/genres';
@@ -117,14 +119,14 @@ class _SongListPageState extends State<SongListPage> {
   @override
   void initState() {
     _getGenreList();
-    _getSongList(0, 10, null, null, null, null, null, null);
+    _getSongList(0, 5, null, null, null, null, null, null);
 
     _songListController.addListener(() async {
       if (_songListController.position.maxScrollExtent ==
           _songListController.position.pixels) {
         await _getSongList(
-            _songList[_sortList.length - 1].songId,
-            10,
+            _songList.last.songId,
+            5,
             criteriaParam,
             _searchController.text,
             genderParam,
@@ -159,6 +161,11 @@ class _SongListPageState extends State<SongListPage> {
                         color: Colors.grey[300]),
                     child: TextField(
                       controller: _searchController,
+                      onSubmitted: (value) async {
+                        _songList.clear();
+                        await _getSongList(0, 5, criteriaParam, value,
+                            genderParam, _currentKey, _currentGenre, sortParam);
+                      },
                       style: const TextStyle(fontSize: 13),
                       decoration: const InputDecoration(
                           prefixIcon: Icon(Icons.search, color: Colors.black),
@@ -208,7 +215,7 @@ class _SongListPageState extends State<SongListPage> {
                         onRefresh: () async {
                           await _getSongList(
                               0,
-                              10,
+                              5,
                               criteriaParam,
                               _searchController.text,
                               genderParam,
@@ -361,7 +368,7 @@ class _SongListPageState extends State<SongListPage> {
                             _songList.clear();
                             _getSongList(
                                 0,
-                                10,
+                                5,
                                 criteriaParam,
                                 _searchController.text,
                                 genderParam,
