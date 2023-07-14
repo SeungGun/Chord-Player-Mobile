@@ -1,3 +1,4 @@
+import 'package:chord_player/CreateGenrePage.dart';
 import 'package:chord_player/SongItemWidget.dart';
 import 'package:chord_player/util/APIUtil.dart';
 import 'package:flutter/material.dart';
@@ -63,9 +64,12 @@ class _SongListPageState extends State<SongListPage> {
   final List<Song> _songList = [];
 
   bool _isLoaded = false;
+  bool _isOverflow = false;
   String? criteriaParam = 'TITLE';
   String? genderParam;
   String? sortParam = 'CHRONOLOGICAL';
+
+  static const int PAGE_SIZE = 5;
 
   Future<void> _getGenreList() async {
     String url = '${APIUtil.API_URL}/genres';
@@ -108,6 +112,9 @@ class _SongListPageState extends State<SongListPage> {
           for (int i = 0; i < decodedJson.length; ++i) {
             _songList.add(Song.fromJson(decodedJson[i]));
           }
+          if (decodedJson.length < PAGE_SIZE) {
+            _isOverflow = true;
+          }
         }
         _isLoaded = true;
       });
@@ -126,7 +133,7 @@ class _SongListPageState extends State<SongListPage> {
           _songListController.position.pixels) {
         await _getSongList(
             _songList.last.songId,
-            5,
+            PAGE_SIZE,
             criteriaParam,
             _searchController.text,
             genderParam,
@@ -141,9 +148,9 @@ class _SongListPageState extends State<SongListPage> {
   @override
   Widget build(BuildContext context) {
     var size = MediaQuery.of(context).size;
-    return SafeArea(
-      child: Scaffold(
-        body: Column(
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
           children: [
             Container(
               padding: EdgeInsets.all(size.width * 0.02),
@@ -163,7 +170,8 @@ class _SongListPageState extends State<SongListPage> {
                       controller: _searchController,
                       onSubmitted: (value) async {
                         _songList.clear();
-                        await _getSongList(0, 5, criteriaParam, value,
+                        _isOverflow = false;
+                        await _getSongList(0, PAGE_SIZE, criteriaParam, value,
                             genderParam, _currentKey, _currentGenre, sortParam);
                       },
                       style: const TextStyle(fontSize: 13),
@@ -213,9 +221,11 @@ class _SongListPageState extends State<SongListPage> {
                     : Expanded(
                         child: RefreshIndicator(
                         onRefresh: () async {
+                          _songList.clear();
+                          _isOverflow = false;
                           await _getSongList(
                               0,
-                              5,
+                              PAGE_SIZE,
                               criteriaParam,
                               _searchController.text,
                               genderParam,
@@ -226,8 +236,8 @@ class _SongListPageState extends State<SongListPage> {
                         child: ListView.builder(
                             controller: _songListController,
                             itemBuilder: (context, index) =>
-                                SongItemWidget(song: _songList[index]),
-                            itemCount: _songList.length,
+                                _pagingWidget(size, _isOverflow, index),
+                            itemCount: _songList.length + 1,
                             shrinkWrap: true),
                       ))
                 : Expanded(
@@ -237,22 +247,43 @@ class _SongListPageState extends State<SongListPage> {
                             const Center(child: CircularProgressIndicator())))
           ],
         ),
-        floatingActionButton: Expandable(
-          distance: 70,
-          children: [
-            ActionButton(
-                onPressed: () {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => CreateSongPage()));
-                },
-                icon: const Icon(Icons.music_note)),
-            // 노래 추가
-            ActionButton(onPressed: () {}, icon: const Icon(Icons.masks))
-            // 장르 추가
-          ],
-        ),
+      ),
+      floatingActionButton: Expandable(
+        distance: 70,
+        children: [
+          ActionButton(
+              onPressed: () async {
+                var isRefresh = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const CreateSongPage()));
+
+                if (isRefresh) {
+                  _songList.clear();
+                  _isOverflow = false;
+                  await _getSongList(
+                      0,
+                      PAGE_SIZE,
+                      criteriaParam,
+                      _searchController.text,
+                      genderParam,
+                      _currentKey,
+                      _currentGenre,
+                      sortParam);
+                }
+              },
+              icon: const Icon(Icons.music_note)),
+          // 노래 추가
+          ActionButton(
+              onPressed: () async {
+                var isRefresh = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const CreateGenrePage()));
+              },
+              icon: const Icon(Icons.masks))
+          // 장르 추가
+        ],
       ),
     );
   }
@@ -366,9 +397,10 @@ class _SongListPageState extends State<SongListPage> {
                           });
                           setState(() {
                             _songList.clear();
+                            _isOverflow = false;
                             _getSongList(
                                 0,
-                                5,
+                                PAGE_SIZE,
                                 criteriaParam,
                                 _searchController.text,
                                 genderParam,
@@ -382,5 +414,26 @@ class _SongListPageState extends State<SongListPage> {
                     }),
               ),
             )));
+  }
+
+  Widget _pagingWidget(Size size, bool isOverflow, int index) {
+    if (isOverflow && index == _songList.length) {
+      return Padding(
+        padding: EdgeInsets.all(size.width * 0.02),
+        child: const Center(
+            child: Text(
+          '마지막 노래입니다.',
+          style: TextStyle(
+              fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black),
+        )),
+      );
+    }
+    if (index == _songList.length) {
+      return Padding(
+        padding: EdgeInsets.all(size.width * 0.02),
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    return SongItemWidget(song: _songList[index]);
   }
 }
