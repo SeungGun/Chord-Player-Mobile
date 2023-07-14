@@ -99,12 +99,16 @@ class _CreateSongPageState extends State<CreateSongPage> {
         },
         body: jsonEncode(_createBody()));
 
-    if (response.statusCode == 200) {
-      print(response.body);
+    if (response.statusCode == 201) {
+      _showToast('노래 생성이 완료되었습니다!');
+      _terminateScreen();
+    } else {
+      _showToast('노래를 생성하는데 문제가 발생했습니다.');
     }
-    else{
-      print(response.body);
-    }
+  }
+
+  void _terminateScreen() {
+    Navigator.pop(context, true);
   }
 
   void _setSelectedRadio(String val) {
@@ -114,7 +118,7 @@ class _CreateSongPageState extends State<CreateSongPage> {
   }
 
   String? _formatModulation() {
-    String modulation = '${_initModController.text}';
+    String modulation = _initModController.text;
     if (_modulationControllerList.isNotEmpty) {
       modulation += '-';
     } else {
@@ -172,6 +176,10 @@ class _CreateSongPageState extends State<CreateSongPage> {
       return null;
     }
     return current.toUpperCase();
+  }
+
+  void _showToast(String msg) {
+    Fluttertoast.showToast(msg: msg);
   }
 
   @override
@@ -375,7 +383,7 @@ class _CreateSongPageState extends State<CreateSongPage> {
                       ],
                     ),
                     Divider(),
-                    Text('BPM', style: TextStyle(fontSize: 12)),
+                    Text('* BPM', style: TextStyle(fontSize: 12)),
                     SizedBox(height: size.height * 0.012),
                     Container(
                       width: size.width * 0.2,
@@ -610,6 +618,31 @@ class _CreateSongPageState extends State<CreateSongPage> {
               child: TextButton(
                   style: ButtonStyle(visualDensity: VisualDensity.compact),
                   onPressed: () async {
+                    if (_titleController.text.isEmpty) {
+                      _showToast('제목을 입력하세요');
+                      return;
+                    }
+
+                    if (_artistController.text.isEmpty) {
+                      _showToast('가수를 입력하세요');
+                      return;
+                    }
+
+                    if (_keyController.text.isEmpty) {
+                      _showToast('원키를 입력하세요');
+                      return;
+                    }
+
+                    if (_genreList.isEmpty) {
+                      _showToast('장르를 한개 이상 선택하세요');
+                      return;
+                    }
+
+                    if (_bpmController.text.isEmpty) {
+                      _showToast('BPM을 입력하세요');
+                      return;
+                    }
+
                     await _registerNewSongWithLyricsAndChords();
                   },
                   child: Text('저장하기',
