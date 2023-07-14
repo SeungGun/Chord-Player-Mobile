@@ -41,28 +41,36 @@ class _SongItemWidgetState extends State<SongItemWidget> {
                   )
                 ],
               ),
-              Container(
-                  decoration: BoxDecoration(
-                      border: Border.all(width: 1),
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(9)),
-                  child: IconButton(
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.all(0),
-                      onPressed: () {
-                        showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                                  title: const Text('Note'),
-                                  content: Text(widget.song.note ?? ""),
-                                  actions: [
-                                    TextButton(
-                                        onPressed: () => Navigator.pop(context),
-                                        child: const Text('닫기'))
-                                  ],
-                                ));
-                      },
-                      icon: const Icon(Icons.event_note, size: 30)))
+              (widget.song.note != null && widget.song.note!.isNotEmpty)
+                  ? Container(
+                      height: size.height * 0.05,
+                      decoration: BoxDecoration(
+                          border: Border.all(width: 0.8),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(9)),
+                      child: IconButton(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.all(0),
+                          onPressed: () {
+                            showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                      title: const Text('Note'),
+                                      content: Text(widget.song.note ?? ""),
+                                      actions: [
+                                        TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context),
+                                            child: const Text('닫기'))
+                                      ],
+                                    ));
+                          },
+                          icon: const Icon(
+                            Icons.event_note,
+                            size: 26,
+                            color: Colors.indigo,
+                          )))
+                  : SizedBox(height: size.height * 0.05)
             ],
           ),
           Row(children: [
